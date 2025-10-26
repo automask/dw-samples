@@ -114,3 +114,4 @@ if(ENABLE_CLANG_FORMATTING)
 endif()
 
 add_subdirectory(volumetric-fog)
+add_subdirectory(cascaded-shadow-maps)

@@ -39,3 +39,6 @@ bin/
 lib/
 x64/
 x64/*
+.idea/
+config.bat
+node_modules
