@@ -20,60 +20,86 @@ set(GLFW_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/glfw/include")
 set(GLM_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/glm/glm")
 set(STB_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/stb")
 set(IMGUI_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/imgui")
-set(ASSIMP_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/assimp/include" "${CMAKE_CURRENT_BINARY_DIR}/external/assimp/include")
+
+# set(ASSIMP_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/assimp/include" "${CMAKE_CURRENT_BINARY_DIR}/external/assimp/include")
 set(JSON_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/json/single_include/nlohmann")
 set(VMA_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/VulkanMemoryAllocator/include")
 set(VOLK_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/volk")
 set(NSIGHT_AFTERMATH_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/external/nsight-aftermath-sdk/include")
 
-if (USE_VULKAN)
+if(USE_VULKAN)
     find_package(Vulkan)
 else()
     find_package(OpenGL REQUIRED)
 endif()
 
 set(DW_SAMPLE_FRAMEWORK_INCLUDES ${DWSFW_INCLUDE_DIRS}
-                                 ${DWSFW_EXTRAS_INCLUDE_DIRS}
-                                 ${GLFW_INCLUDE_DIRS}
-                                 ${GLM_INCLUDE_DIRS}
-                                 ${STB_INCLUDE_DIRS}
-                                 ${IMGUI_INCLUDE_DIRS}
-                                 ${ASSIMP_INCLUDE_DIRS}
-                                 ${JSON_INCLUDE_DIRS}
-                                 ${VMA_INCLUDE_DIRS}
-                                 ${VOLK_INCLUDE_DIRS}
-                                 ${NSIGHT_AFTERMATH_INCLUDE_DIRS}
-                                 PARENT_SCOPE)
+    ${DWSFW_EXTRAS_INCLUDE_DIRS}
+    ${GLFW_INCLUDE_DIRS}
+    ${GLM_INCLUDE_DIRS}
+    ${STB_INCLUDE_DIRS}
+    ${IMGUI_INCLUDE_DIRS}
+
+    # ${ASSIMP_INCLUDE_DIRS}
+    ${JSON_INCLUDE_DIRS}
+    ${VMA_INCLUDE_DIRS}
+    ${VOLK_INCLUDE_DIRS}
+    ${NSIGHT_AFTERMATH_INCLUDE_DIRS}
+    PARENT_SCOPE)
 
 include_directories(${DWSFW_INCLUDE_DIRS}
-                    ${DWSFW_EXTRAS_INCLUDE_DIRS}
-                    ${GLFW_INCLUDE_DIRS}
-                    ${GLM_INCLUDE_DIRS}
-                    ${STB_INCLUDE_DIRS}
-                    ${IMGUI_INCLUDE_DIRS}
-                    ${ASSIMP_INCLUDE_DIRS}
-                    ${JSON_INCLUDE_DIRS}
-                    ${VMA_INCLUDE_DIRS}
-                    ${VOLK_INCLUDE_DIRS}
-                    ${NSIGHT_AFTERMATH_INCLUDE_DIRS})
+    ${DWSFW_EXTRAS_INCLUDE_DIRS}
+    ${GLFW_INCLUDE_DIRS}
+    ${GLM_INCLUDE_DIRS}
+    ${STB_INCLUDE_DIRS}
+    ${IMGUI_INCLUDE_DIRS}
 
-if (NOT EMSCRIPTEN)
+    # ${ASSIMP_INCLUDE_DIRS}
+    ${JSON_INCLUDE_DIRS}
+    ${VMA_INCLUDE_DIRS}
+    ${VOLK_INCLUDE_DIRS}
+    ${NSIGHT_AFTERMATH_INCLUDE_DIRS})
+
+if(NOT EMSCRIPTEN)
     add_subdirectory(external/glfw)
 endif()
-          
-if (USE_VULKAN)
+
+if(USE_VULKAN)
     add_subdirectory(external/volk)
 endif()
-      
-add_subdirectory(external/assimp)
 
+set(CPP_BUILD_ROOT "${CMAKE_SOURCE_DIR}/../../static-shared/CppLibrary")
+get_filename_component(CPP_BUILD_ROOT ${CPP_BUILD_ROOT} ABSOLUTE)
+
+if(NOT EXISTS ${CPP_BUILD_ROOT})
+    message(FATAL_ERROR "[KSpace] ${CPP_BUILD_ROOT} not exist...")
+else()
+    message("[KSpace] Find CppLibrary Root ${CPP_BUILD_ROOT}")
+endif()
+
+function(link_assimp name)
+    target_link_libraries(${name} ${CPP_BUILD_ROOT}/assimp/lib/assimp-vc143-mt.lib)
+    target_link_libraries(${name} ${CPP_BUILD_ROOT}/assimp/lib/zlibstatic.lib)
+    target_include_directories(${name} PUBLIC ${CPP_BUILD_ROOT}/assimp/include)
+
+    set(item_dll ${CPP_BUILD_ROOT}/assimp/bin/assimp-vc143-mt.dll)
+    get_filename_component(item_name ${item_dll} NAME)
+
+    add_custom_command(
+        TARGET ${name} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${item_dll} "$<TARGET_FILE_DIR:${name}>/${item_name}"
+        WORKING_DIRECTORY ${CPP_BUILD_ROOT}
+    )
+endfunction()
+
+# add_subdirectory(external/assimp)
 add_subdirectory(src)
 
-if (BUILD_SAMPLES)
+if(BUILD_SAMPLES)
     add_subdirectory(sample)
 endif()
 
-if (ENABLE_CLANG_FORMATTING)
+if(ENABLE_CLANG_FORMATTING)
     find_program(CLANG_FORMAT_EXE NAMES "clang-format" DOC "Path to clang-format executable")
 
     file(GLOB_RECURSE DWSF_HEADERS ${PROJECT_SOURCE_DIR}/include/*.h)
@@ -86,3 +112,5 @@ if (ENABLE_CLANG_FORMATTING)
         add_custom_target(clang-format-project-files COMMAND ${CLANG_FORMAT_EXE} -i -style=file ${DWSF_HEADERS} ${DWSF_SOURCES} ${DWSF_SAMPLE_HEADERS} ${DWSF_SAMPLE_SOURCES})
     endif()
 endif()
+
+add_subdirectory(volumetric-fog)
